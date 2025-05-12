@@ -6,9 +6,8 @@ class CalculadoraMatrices(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("Calculadora de Matrices")
-        self.geometry("500x600")
+        self.geometry("500x700")  
         self.configure(fg_color="#f5f5f5")
-        self.iconbitmap("logo.ico")
         self.resizable(False, False)
         self.crear_frame_entrada_matrices()
         self.crear_frame_operaciones()
@@ -65,6 +64,10 @@ class CalculadoraMatrices(ctk.CTk):
         self.label_resultado = ctk.CTkLabel(frame_operaciones, text="", text_color="#343a40", wraplength=400)
         self.label_resultado.pack(pady=10)
 
+        self.text_pasos = ctk.CTkTextbox(frame_operaciones, height=150, width=400, fg_color="#ffffff", 
+                                         text_color="#343a40", border_color="#d1d1d1")
+        self.text_pasos.pack(pady=10)
+
     def leer_matriz(self, texto_matriz):
         try:
             matrix = ast.literal_eval(texto_matriz)
@@ -94,6 +97,18 @@ class CalculadoraMatrices(ctk.CTk):
                 raise ValueError("Las matrices deben tener la misma dimensión")
             resultado = [[A[i][j] + B[i][j] for j in range(len(A[0]))] for i in range(len(A))]
             self.label_resultado.configure(text=f"Suma:\n{self.formatear_matriz(resultado)}")
+            
+            pasos = "Pasos para la suma de matrices:\n"
+            pasos += f"Matriz A:\n{self.formatear_matriz(A)}\n"
+            pasos += f"Matriz B:\n{self.formatear_matriz(B)}\n"
+            pasos += "Suma elemento por elemento:\n"
+            for i in range(len(A)):
+                for j in range(len(A[0])):
+                    pasos += f"Posición [{i+1},{j+1}]: {A[i][j]} + {B[i][j]} = {resultado[i][j]}\n"
+            pasos += f"Resultado:\n{self.formatear_matriz(resultado)}"
+            
+            self.text_pasos.delete("1.0", "end")
+            self.text_pasos.insert("1.0", pasos)
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
@@ -105,6 +120,18 @@ class CalculadoraMatrices(ctk.CTk):
                 raise ValueError("Las matrices deben tener la misma dimensión")
             resultado = [[A[i][j] - B[i][j] for j in range(len(A[0]))] for i in range(len(A))]
             self.label_resultado.configure(text=f"Resta:\n{self.formatear_matriz(resultado)}")
+            
+            pasos = "Pasos para la resta de matrices:\n"
+            pasos += f"Matriz A:\n{self.formatear_matriz(A)}\n"
+            pasos += f"Matriz B:\n{self.formatear_matriz(B)}\n"
+            pasos += "Resta elemento por elemento:\n"
+            for i in range(len(A)):
+                for j in range(len(A[0])):
+                    pasos += f"Posición [{i+1},{j+1}]: {A[i][j]} - {B[i][j]} = {resultado[i][j]}\n"
+            pasos += f"Resultado:\n{self.formatear_matriz(resultado)}"
+            
+            self.text_pasos.delete("1.0", "end")
+            self.text_pasos.insert("1.0", pasos)
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
@@ -116,62 +143,118 @@ class CalculadoraMatrices(ctk.CTk):
                 raise ValueError("El número de columnas de A debe igualar el número de filas de B")
             resultado = [[sum(A[i][k] * B[k][j] for k in range(len(B))) for j in range(len(B[0]))] for i in range(len(A))]
             self.label_resultado.configure(text=f"Multiplicación:\n{self.formatear_matriz(resultado)}")
+            
+            pasos = "Pasos para la multiplicación de matrices:\n"
+            pasos += f"Matriz A ({len(A)}x{len(A[0])}):\n{self.formatear_matriz(A)}\n"
+            pasos += f"Matriz B ({len(B)}x{len(B[0])}):\n{self.formatear_matriz(B)}\n"
+            pasos += "Cálculo de cada elemento de la matriz resultante:\n"
+            for i in range(len(A)):
+                for j in range(len(B[0])):
+                    calculo = f"Posición [{i+1},{j+1}]: "
+                    terms = [f"({A[i][k]} × {B[k][j]})" for k in range(len(B))]
+                    calculo += " + ".join(terms) + f" = {resultado[i][j]}\n"
+                    pasos += calculo
+            pasos += f"Resultado:\n{self.formatear_matriz(resultado)}"
+            
+            self.text_pasos.delete("1.0", "end")
+            self.text_pasos.insert("1.0", pasos)
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
     def calcular_determinante(self):
         try:
             A = self.leer_matriz(self.entry_matriz_a.get())
-            det = self.determinante(A)
+            det, pasos = self.determinante_con_pasos(A)
             self.label_resultado.configure(text=f"Determinante: {round(det, 2)}")
+            
+            self.text_pasos.delete("1.0", "end")
+            self.text_pasos.insert("1.0", pasos)
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
     def calcular_inversa(self):
         try:
             A = self.leer_matriz(self.entry_matriz_a.get())
-            inv = self.inversa(A)
+            inv, pasos = self.inversa_con_pasos(A)
             self.label_resultado.configure(text=f"Inversa:\n{self.formatear_matriz(inv)}")
+            
+            self.text_pasos.delete("1.0", "end")
+            self.text_pasos.insert("1.0", pasos)
         except Exception as e:
             messagebox.showerror("Error", str(e))
-
-    def determinante(self, M):
-        if len(M) != len(M[0]):
-            raise ValueError("La matriz debe ser cuadrada")
-        n = len(M)
-        if n == 1:
-            return M[0][0]
-        if n == 2:
-            return M[0][0]*M[1][1] - M[0][1]*M[1][0]
-        det = 0
-        for c in range(n):
-            menor = self.matriz_menor(M, 0, c)
-            det += ((-1) ** c) * M[0][c] * self.determinante(menor)
-        return det
 
     def matriz_menor(self, M, i, j):
         return [fila[:j] + fila[j+1:] for k, fila in enumerate(M) if k != i]
 
-    def inversa(self, M):
-        if len(M) != len(M[0]):
-            raise ValueError("La matriz debe ser cuadrada")
-        det = self.determinante(M)
-        if det == 0:
-            raise ValueError("La matriz no es invertible")
-
+    def determinante_con_pasos(self, M):
+        pasos = "Pasos para calcular el determinante:\n"
+        pasos += f"Matriz A:\n{self.formatear_matriz(M)}\n"
         n = len(M)
+        if n != len(M[0]):
+            raise ValueError("La matriz debe ser cuadrada")
+        if n == 1:
+            pasos += f"Matriz 1x1: det = {M[0][0]}\n"
+            return M[0][0], pasos
+        if n == 2:
+            det = M[0][0] * M[1][1] - M[0][1] * M[1][0]
+            pasos += "Para una matriz 2x2, det = (a*d - b*c):\n"
+            pasos += f"({M[0][0]} × {M[1][1]}) - ({M[0][1]} × {M[1][0]}) = {M[0][0] * M[1][1]} - {M[0][1] * M[1][0]} = {det}\n"
+            return det, pasos
+        det = 0
+        pasos += f"Usando expansión por cofactores a lo largo de la primera fila ({n}x{n}):\n"
+        pasos += "det = Σ ((-1)^(1+j) × a[1,j] × det(Menor[1,j]))\n"
+
+        for j in range(n):
+            cofactor = ((-1) ** (1 + j)) * M[0][j]
+            menor = self.matriz_menor(M, 0, j)
+            sub_det, sub_pasos = self.determinante_con_pasos(menor)
+            det += cofactor * sub_det
+            pasos += f"\nCofactor en posición [1,{j+1}]: (-1)^(1+{j+1}) × {M[0][j]} × det(Menor[1,{j+1}])\n"
+            pasos += f"Menor[1,{j+1}]:\n{self.formatear_matriz(menor)}\n"
+            pasos += f"Determinante del menor:\n{sub_pasos}\n"
+            pasos += f"= {(-1) ** (1 + j)} × {M[0][j]} × {sub_det} = {cofactor * sub_det}\n"
+
+        pasos += f"Suma de cofactores: {det}\n"
+        pasos += f"Determinante final: {det}\n"
+        return det, pasos
+
+    def inversa_con_pasos(self, M):
+        pasos = "Pasos para calcular la inversa de la matriz:\n"
+        pasos += f"Matriz A:\n{self.formatear_matriz(M)}\n"
+        n = len(M)
+        if n != len(M[0]):
+            raise ValueError("La matriz debe ser cuadrada")
+
+        det, det_pasos = self.determinante_con_pasos(M)
+        pasos += "Paso 1: Calcular el determinante\n"
+        pasos += det_pasos + "\n"
+        
+        if det == 0:
+            raise ValueError("La matriz no tiene inversa (determinante = 0)")
+
+        pasos += "Paso 2: Calcular la matriz de cofactores\n"
         cofactores = []
         for i in range(n):
-            fila = []
+            fila_cofactores = []
             for j in range(n):
                 menor = self.matriz_menor(M, i, j)
-                signo = (-1) ** (i + j)
-                fila.append(signo * self.determinante(menor))
-            cofactores.append(fila)
+                sub_det, _ = self.determinante_con_pasos(menor)
+                cofactor = ((-1) ** (i + j)) * sub_det
+                fila_cofactores.append(cofactor)
+                pasos += f"Cofactor C[{i+1},{j+1}]: (-1)^({i+1}+{j+1}) × det(Menor[{i+1},{j+1}]) = {(-1) ** (i + j)} × {sub_det} = {cofactor}\n"
+            cofactores.append(fila_cofactores)
+        
+        pasos += f"Matriz de cofactores:\n{self.formatear_matriz(cofactores)}\n"
 
-        cofactores_T = list(map(list, zip(*cofactores)))
-        inversa = [[cofactores_T[i][j] / det for j in range(n)] for i in range(n)]
-        return inversa
+        pasos += "Paso 3: Transponer la matriz de cofactores para obtener la adjunta\n"
+        adjunta = [[cofactores[j][i] for j in range(n)] for i in range(n)]
+        pasos += f"Matriz adjunta:\n{self.formatear_matriz(adjunta)}\n"
+
+        pasos += f"Paso 4: Dividir la matriz adjunta por el determinante ({det})\n"
+        inversa = [[adjunta[i][j] / det for j in range(n)] for i in range(n)]
+        pasos += f"Matriz inversa:\n{self.formatear_matriz(inversa)}\n"
+
+        return inversa, pasos
 
 if __name__ == "__main__":
     app = CalculadoraMatrices()
