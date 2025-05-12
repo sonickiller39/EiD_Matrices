@@ -1,5 +1,6 @@
 import customtkinter as ctk
 from tkinter import messagebox
+import ast
 
 class CalculadoraMatrices(ctk.CTk):
     def __init__(self):
@@ -66,14 +67,24 @@ class CalculadoraMatrices(ctk.CTk):
 
     def leer_matriz(self, texto_matriz):
         try:
-            matrix = eval(texto_matriz, {"__builtins__": None}, {})
-            if not all(isinstance(row, list) for row in matrix):
-                raise ValueError
+            matrix = ast.literal_eval(texto_matriz)
+            if not isinstance(matrix, list) or not all(isinstance(row, list) for row in matrix):
+                raise ValueError("Debe ser una lista de listas")
             if not all(len(row) == len(matrix[0]) for row in matrix):
                 raise ValueError("Todas las filas deben tener la misma longitud")
             return [[float(val) for val in row] for row in matrix]
-        except:
-            raise ValueError("Formato de matriz inválido")
+        except Exception:
+            raise ValueError("Formato de matriz inválido. Usa: [[1,2],[3,4]]")
+
+    def formatear_matriz(self, matriz):
+        filas = []
+        for fila in matriz:
+            fila_formateada = "  ".join(
+                f"{val:.2f}".rstrip('0').rstrip('.') if isinstance(val, float) else str(val)
+                for val in fila
+            )
+            filas.append(f"[ {fila_formateada} ]")
+        return "\n".join(filas)
 
     def calcular_suma(self):
         try:
@@ -82,7 +93,7 @@ class CalculadoraMatrices(ctk.CTk):
             if len(A) != len(B) or len(A[0]) != len(B[0]):
                 raise ValueError("Las matrices deben tener la misma dimensión")
             resultado = [[A[i][j] + B[i][j] for j in range(len(A[0]))] for i in range(len(A))]
-            self.label_resultado.configure(text=f"Suma:\n{resultado}")
+            self.label_resultado.configure(text=f"Suma:\n{self.formatear_matriz(resultado)}")
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
@@ -93,7 +104,7 @@ class CalculadoraMatrices(ctk.CTk):
             if len(A) != len(B) or len(A[0]) != len(B[0]):
                 raise ValueError("Las matrices deben tener la misma dimensión")
             resultado = [[A[i][j] - B[i][j] for j in range(len(A[0]))] for i in range(len(A))]
-            self.label_resultado.configure(text=f"Resta:\n{resultado}")
+            self.label_resultado.configure(text=f"Resta:\n{self.formatear_matriz(resultado)}")
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
@@ -104,7 +115,7 @@ class CalculadoraMatrices(ctk.CTk):
             if len(A[0]) != len(B):
                 raise ValueError("El número de columnas de A debe igualar el número de filas de B")
             resultado = [[sum(A[i][k] * B[k][j] for k in range(len(B))) for j in range(len(B[0]))] for i in range(len(A))]
-            self.label_resultado.configure(text=f"Multiplicación:\n{resultado}")
+            self.label_resultado.configure(text=f"Multiplicación:\n{self.formatear_matriz(resultado)}")
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
@@ -120,7 +131,7 @@ class CalculadoraMatrices(ctk.CTk):
         try:
             A = self.leer_matriz(self.entry_matriz_a.get())
             inv = self.inversa(A)
-            self.label_resultado.configure(text=f"Inversa:\n{inv}")
+            self.label_resultado.configure(text=f"Inversa:\n{self.formatear_matriz(inv)}")
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
@@ -128,22 +139,39 @@ class CalculadoraMatrices(ctk.CTk):
         if len(M) != len(M[0]):
             raise ValueError("La matriz debe ser cuadrada")
         n = len(M)
+        if n == 1:
+            return M[0][0]
         if n == 2:
             return M[0][0]*M[1][1] - M[0][1]*M[1][0]
-        elif n == 3:
-            return (M[0][0]*M[1][1]*M[2][2] + M[0][1]*M[1][2]*M[2][0] + M[0][2]*M[1][0]*M[2][1]
-                  - M[0][2]*M[1][1]*M[2][0] - M[0][1]*M[1][0]*M[2][2] - M[0][0]*M[1][2]*M[2][1])
-        else:
-            raise NotImplementedError("Solo se admite determinante de matrices 2x2 o 3x3")
+        det = 0
+        for c in range(n):
+            menor = self.matriz_menor(M, 0, c)
+            det += ((-1) ** c) * M[0][c] * self.determinante(menor)
+        return det
+
+    def matriz_menor(self, M, i, j):
+        return [fila[:j] + fila[j+1:] for k, fila in enumerate(M) if k != i]
 
     def inversa(self, M):
-        if len(M) != 2 or len(M[0]) != 2:
-            raise NotImplementedError("Solo se admite la inversa de una matriz 2x2")
+        if len(M) != len(M[0]):
+            raise ValueError("La matriz debe ser cuadrada")
         det = self.determinante(M)
         if det == 0:
             raise ValueError("La matriz no es invertible")
-        return [[ M[1][1]/det, -M[0][1]/det],
-                [-M[1][0]/det,  M[0][0]/det]]
+
+        n = len(M)
+        cofactores = []
+        for i in range(n):
+            fila = []
+            for j in range(n):
+                menor = self.matriz_menor(M, i, j)
+                signo = (-1) ** (i + j)
+                fila.append(signo * self.determinante(menor))
+            cofactores.append(fila)
+
+        cofactores_T = list(map(list, zip(*cofactores)))
+        inversa = [[cofactores_T[i][j] / det for j in range(n)] for i in range(n)]
+        return inversa
 
 if __name__ == "__main__":
     app = CalculadoraMatrices()
