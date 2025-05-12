@@ -172,6 +172,9 @@ class CalculadoraMatrices(ctk.CTk):
         cofactores_T = list(map(list, zip(*cofactores)))
         inversa = [[cofactores_T[i][j] / det for j in range(n)] for i in range(n)]
         return inversa
+    
+    def desarrollo(self):
+        pass
 
 if __name__ == "__main__":
     app = CalculadoraMatrices()
